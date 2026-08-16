@@ -10,14 +10,37 @@ United States* volume.
 ## What is here
 
 ```
-shards/<volumeId>.vec    552 files, ~82 MB total, ~148 KB each
+shards/<volumeId>.vec    552 files, 155 MB total, 287 KB each on average
 shards-manifest.json     per-shard SHA-256 + byte length + the provenance pin
 ```
+
+Shard sizes track volume length, not an average: the smallest is 1 KB and the largest 965 KB, with a
+median of 242 KB.
 
 `shards-manifest.json` is authoritative for integrity: the app verifies a downloaded shard against
 its digest, and every shard's own 64-byte header carries the same provenance digest the app has
 bundled. A shard whose pin does not match the app's bundled tier is refused rather than blended —
 vectors from two different generations must never be scored against each other.
+
+## Generations
+
+**These shards are the 512-dimension generation, published 2026-08-16.** They replaced a
+256-dimension set built from the same harvest.
+
+The two are not interchangeable, and the mechanism that stops them mixing is the provenance digest:
+`shippingDims` is one of its inputs, so widening the truncation moves the digest, and an app bundled
+against one generation refuses every shard of the other. That refusal is the design working. In
+practice it means **the shards and the app's bundled tier must be updated together** — an app on the
+256 pin fetching these files rejects each one on its byte length before the digest is even checked.
+
+| generation | dims | total | per shard | provenance digest |
+|---|---|---|---|---|
+| current | 512 | 155 MB | 287 KB mean | `a726ca60…6aa6e3a64` |
+| previous | 256 | 78 MB | 145 KB mean | `57fb4c4b…0ca4bfb14` |
+
+Both are reproducible from the same raw harvest with `SemanticVectorsGenerator` at the matching
+`DIMS` — verified byte-for-byte across independent runs, over all three bundled artifacts and all
+552 shards. Nothing here needs to be archived to be recoverable.
 
 ## Shard format
 
@@ -27,12 +50,15 @@ All little-endian.
 |---|---|---|
 | 0 | 4 | magic `FRSS` |
 | 4 | 4 | layout version (`1`) |
-| 8 | 4 | dimensions (`256`) |
+| 8 | 4 | dimensions (`512`) |
 | 12 | 4 | document count |
 | 16 | 32 | provenance digest (SHA-256) |
 | 48 | 16 | zero padding |
-| 64 | `count × 256` | int8 codes, one 256-byte row per document |
+| 64 | `count × 512` | int8 codes, one 512-byte row per document |
 | … | `count × 4` | `Float32` per-vector quantization scale |
+
+The width is read from the header rather than assumed, so a consumer needs no compile-time constant
+to parse either generation — only the digest decides whether it may *use* what it parsed.
 
 Vectors are L2-normalised before quantization, so `dot(a, b) × scaleA × scaleB` reconstructs cosine
 similarity.
@@ -49,25 +75,40 @@ these vectors were built.
 |---|---|
 | model | `text-embedding-embeddinggemma-300m-qat` (EmbeddingGemma-300M, QAT release) |
 | weights SHA-256 | `5a9e0645541b06367dec3fd14d0019015b872cfe36d35dfb2a9d752dade09020` |
-| dimensions | 768 native, truncated to 256 (Matryoshka), then int8 |
+| dimensions | 768 native, truncated to 512 (Matryoshka), then int8 |
 | chunking | 3200 characters, 480 overlap |
-| document prompt | `title: none | text: ` (trailing space significant) |
+| document prompt | `title: none \| text: ` (trailing space significant) |
 | pooling | character-length-weighted mean of unit-norm chunk vectors, L2-renormalised |
 | corpus | 552 volumes, 314,483 documents, 605,643 chunks |
 | harvested | 2026-08-10 |
-| provenance digest | `57fb4c4b3aea961595df87dcbd28c0af7ec8a671bc4c11f886827a20ca4bfb14` |
+| packed | 2026-08-16 |
+| provenance digest | `a726ca606bdf4d1984ba7cfda4d5605c2e9dc1a8320654a1b5742e06aa6e3a64` |
+
+The harvest is unchanged from the 256 generation — only the Matryoshka truncation and the
+quantization width differ, which is why re-embedding was not needed to widen the shards.
 
 ## Quality, honestly
 
-Measured against exact float-768 neighbours over 3,600 era-stratified queries: the shipping
-configuration (256-bit Hamming candidate generation → int8-256 rerank at a pool of 800) recalls
-**0.745** of the exact top ten. Flat int8-256 without the binary funnel is 0.749; int8-512 would be
-0.864 at double the size.
+Measured against exact float-768 neighbours over 3,600 era-stratified queries. The shipping
+configuration is binary Hamming candidate generation at a pool of 800, then an int8 rerank:
+
+| configuration | recall@10 |
+|---|---|
+| **512 (current)** — Hamming-800 → int8-512 | **0.851** |
+| 256 (previous) — Hamming-800 → int8-256 | 0.745 |
+| flat int8-512, no binary funnel | 0.864 |
+| raw binary alone, no rerank | 0.53 |
+
+So the funnel costs 0.013 against a flat int8-512 scan, and the width buys 0.106 over the generation
+it replaced — for twice the bytes and about 1.6× the query time. That time figure is an **M1 Max**
+measurement (≈1.0 ms → ≈1.6 ms for a full-corpus scan of 314,483 documents); the ratio should
+transfer to a phone but the absolute numbers will not, and no on-device measurement has been taken.
 
 The semantic feature these support ships **experimental**. Quality on pre-1900 volumes is an
 *unmeasured unknown* rather than a measured pass — the automatic gate available (editorial
 cross-references) reaches only 572 pre-1900 queries corpus-wide, because the citation idiom it
-relies on postdates 1945.
+relies on postdates 1945. Widening to 512 does not change that: it improves agreement with the
+float-768 model, which is not the same as improving agreement with a historian.
 
 ## Licence
 
