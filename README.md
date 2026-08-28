@@ -110,6 +110,22 @@ cross-references) reaches only 572 pre-1900 queries corpus-wide, because the cit
 relies on postdates 1945. Widening to 512 does not change that: it improves agreement with the
 float-768 model, which is not the same as improving agreement with a historian.
 
+## Model weights
+
+Beside the per-volume vector shards, this repository's **Releases** host the query encoder the
+FRUS Explorer app can optionally download: Google's EmbeddingGemma model, as the unmodified
+lmstudio-community Q4_0 QAT GGUF build (`embeddinggemma-300m-qat-Q4_0.gguf`, 229,093,184 bytes,
+SHA-256 `5a9e0645541b06367dec3fd14d0019015b872cfe36d35dfb2a9d752dade09020`).
+
+The model weights are **not** covered by this repository's licence. Gemma is provided under and
+subject to the [Gemma Terms of Use](https://ai.google.dev/gemma/terms), including the
+[Gemma Prohibited Use Policy](https://ai.google.dev/gemma/prohibited_use_policy). By downloading
+or using the model file you agree to those terms, including their use restrictions. The vector
+artifacts in this repository are model *outputs* and carry no model-licence conditions.
+
+The release also carries `llama-xcframework-dSYMs-8663224.zip` — debug symbols for the llama.cpp
+build (MIT) the app embeds to run the model, archived for crash symbolication.
+
 ## Licence
 
 The source documents are U.S. Government works in the public domain. The vectors are model outputs;
