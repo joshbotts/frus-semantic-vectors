@@ -10,17 +10,20 @@ United States* volume.
 ## What is here
 
 ```
-shards/<volumeId>.vec    552 files, 155 MB total, 287 KB each on average
+shards/<volumeId>.vec    553 files, 155 MB total, 287 KB each on average
 shards-manifest.json     per-shard SHA-256 + byte length + the provenance pin
 ```
 
 Shard sizes track volume length, not an average: the smallest is 1 KB and the largest 965 KB, with a
 median of 242 KB.
 
-`shards-manifest.json` is authoritative for integrity: the app verifies a downloaded shard against
-its digest, and every shard's own 64-byte header carries the same provenance digest the app has
-bundled. A shard whose pin does not match the app's bundled tier is refused rather than blended —
-vectors from two different generations must never be scored against each other.
+`shards-manifest.json` lists every file here with its byte length and SHA-256. It is a copy of the
+manifest the app bundles (`FRUSExplorer/Resources/semantic-shards-manifest.json` in the app
+repository), and the bundled copy is the one that decides: a build verifies each shard it downloads
+against the length and digest it shipped with, never against this file. Every shard's own 64-byte
+header carries the same provenance digest the app has bundled. A shard whose pin does not match the
+app's bundled tier is refused rather than blended — vectors from two different generations must
+never be scored against each other.
 
 ## Generations
 
@@ -40,7 +43,35 @@ practice it means **the shards and the app's bundled tier must be updated togeth
 
 Both are reproducible from the same raw harvest with `SemanticVectorsGenerator` at the matching
 `DIMS` — verified byte-for-byte across independent runs, over all three bundled artifacts and all
-552 shards. Nothing here needs to be archived to be recoverable.
+552 shards of the first publication. Nothing here needs to be archived to be recoverable.
+
+## Changes since publication
+
+The generation has not changed since 2026-08-16: the same model file, prompt, chunking and width,
+and so the same provenance digest. Three files have changed, each because the Office of the
+Historian changed the volume it describes.
+
+| date | file | what changed |
+|---|---|---|
+| 2026-09-09 | `frus1981-88v16.vec` | added: the volume was published, in part (88 documents) |
+| 2026-10-10 | `frus1952-54v09p1.vec` | replaced: Documents 900–946 were restored to the volume, 899 → 946 rows |
+| 2026-10-10 | `frus1902app1.vec` | replaced: two divisions stopped being documents, 198 → 196 rows |
+
+A re-pack leaves every other file byte-identical: on 2026-10-10, 551 of the 553.
+
+A volume whose documents change is embedded again as a whole, and embedding is not bit-reproducible
+from one machine to another. So a replaced file's rows for the documents that did not change can
+differ from their predecessors' in a few low bits. For the two files of 2026-10-10 the new vectors
+agree with the ones they replace at a cosine of 0.999999 or better, measured before quantization
+over the 2,264 text chunks both runs embedded.
+
+**A replacement is made in place, and an older build of the app will not take it.** The address
+carries no version, and a build verifies a download against the manifest it shipped with. A FRUS
+Explorer build whose bundled manifest predates a replacement therefore refuses a fresh download of
+that file and scores that volume from its bundled tier alone; a copy it already holds stays. For the
+two files of 2026-10-10 that is build 49 and earlier. The files those builds expect are in this
+repository's history at commit `dd8295f`. An added file has no such cost, since no earlier build
+names it.
 
 ## Shard format
 
@@ -79,13 +110,15 @@ these vectors were built.
 | chunking | 3200 characters, 480 overlap |
 | document prompt | `title: none \| text: ` (trailing space significant) |
 | pooling | character-length-weighted mean of unit-norm chunk vectors, L2-renormalised |
-| corpus | 552 volumes, 314,483 documents, 605,643 chunks |
-| harvested | 2026-08-10 |
-| packed | 2026-08-16 |
+| corpus | 553 volumes, 314,616 documents, 605,978 chunks |
+| harvested | 2026-08-10; `frus1981-88v16` on 2026-09-09; `frus1952-54v09p1` and `frus1902app1` again on 2026-10-10 |
+| packed | 2026-10-10 |
 | provenance digest | `a726ca606bdf4d1984ba7cfda4d5605c2e9dc1a8320654a1b5742e06aa6e3a64` |
 
-The harvest is unchanged from the 256 generation — only the Matryoshka truncation and the
-quantization width differ, which is why re-embedding was not needed to widen the shards.
+The harvest was unchanged from the 256 generation when the shards were widened — only the
+Matryoshka truncation and the quantization width differ, which is why re-embedding was not needed.
+The three volumes embedded since (above) were embedded under the same model file, prompt and
+chunking.
 
 ## Quality, honestly
 
@@ -109,6 +142,9 @@ The semantic feature these support ships **experimental**. Quality on pre-1900 v
 cross-references) reaches only 572 pre-1900 queries corpus-wide, because the citation idiom it
 relies on postdates 1945. Widening to 512 does not change that: it improves agreement with the
 float-768 model, which is not the same as improving agreement with a historian.
+
+Every figure in this section was measured on the first publication (552 volumes, 314,483 documents)
+and has not been measured again. The three files changed since hold 1,230 of the 314,616 documents.
 
 ## Model weights
 
