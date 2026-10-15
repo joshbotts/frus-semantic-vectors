@@ -1,14 +1,21 @@
 frus-semantic-vectors
 
 The vector shards in this repository are model outputs derived from the public-domain
-Foreign Relations of the United States series; the Gemma Terms of Use do not claim model
-outputs, and no model-licence conditions attach to them.
+Foreign Relations of the United States series. No model-licence conditions attach to
+them: the Gemma Terms of Use do not claim model outputs, and EmbeddingGemma 2's
+licence, Apache 2.0, places no condition on outputs.
 
-The model weights hosted under this repository's Releases are Google's EmbeddingGemma,
-distributed unmodified — the lmstudio-community Q4_0 QAT GGUF build
+The model weights hosted under this repository's Releases are distributed unmodified.
+They are not covered by any licence stated in this repository; each is under its own.
+
+Release encoder-2: Google's EmbeddingGemma 2, the ggml-org Q8_0 GGUF build of
+google/embeddinggemma-2 (embeddinggemma-2-Q8_0.gguf, 309,855,456 bytes, SHA-256
+2188ac1deca4b77dffefd603c2776a9d76d9d74ec01841392982ebb840b09135). Licensed under the
+Apache License, Version 2.0; a copy is in LICENSES/Apache-2.0.txt.
+
+Release encoder-1: Google's EmbeddingGemma, the lmstudio-community Q4_0 QAT GGUF build
 (embeddinggemma-300m-qat-Q4_0.gguf, 229,093,184 bytes, SHA-256
-5a9e0645541b06367dec3fd14d0019015b872cfe36d35dfb2a9d752dade09020). They are not covered
-by any licence stated in this repository.
+5a9e0645541b06367dec3fd14d0019015b872cfe36d35dfb2a9d752dade09020).
 
 Gemma is provided under and subject to the Gemma Terms of Use found at
 ai.google.dev/gemma/terms.
